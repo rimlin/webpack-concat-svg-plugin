@@ -4,6 +4,7 @@
  */
 const fs = require('fs');
 const minify = require('html-minifier').minify;
+const SVGO = require('svgo');
 const md5 = require('md5');
 const path = require('path');
 
@@ -19,6 +20,7 @@ class ConcatPlugin {
         }, options);
 
         // used to determine if we should emit files during compiler emit event
+        this.svgo = new SVGO({});
         this.startTime = Date.now();
         this.prevTimestamps = {};
         this.filesToConcatAbsolute = options.filesToConcat
@@ -49,6 +51,16 @@ class ConcatPlugin {
 
         this.fileMd5 = md5(content);
         return this.fileMd5;
+    }
+
+    svgFormat(filesContent) {
+        return (`
+            <?xml version="1.0" encoding="utf-8"?> 
+            <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"> 
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"> 
+                ${filesContent} 
+            </svg>
+        `);
     }
 
     apply(compiler) {
@@ -89,6 +101,8 @@ class ConcatPlugin {
 
             Promise.all(concatPromise()).then(files => {
                 const allFiles = files.reduce((file1, file2) => Object.assign(file1, file2));
+                const filesContent = self.svgFormat(Object.values(allFiles).join(''));
+
                 self.settings.fileName = self.getFileName(allFiles);
 
                 if (process.env.NODE_ENV === 'production' || self.settings.minify) {
@@ -102,38 +116,50 @@ class ConcatPlugin {
                         options.outSourceMap = `${self.settings.fileName.split(path.sep).slice(-1).join(path.sep)}.map`;
                     }
 
-                    const result = minify(allFiles, options);
-
-                    content = result.code;
-
-                    if (self.settings.sourceMap) {
-                        const mapContent = result.map.toString();
-                        compilation.assets[`${self.settings.fileName}.map`] = {
+                    self.svgo.optimize(filesContent).then(function(result) {
+                        content = result.data;
+                        
+                        if (self.settings.sourceMap) {
+                            const mapContent = content.toString();
+                            compilation.assets[`${self.settings.fileName}.map`] = {
+                                source() {
+                                    return mapContent;
+                                },
+                                size() {
+                                    return mapContent.length;
+                                }
+                            };
+                        }
+                
+                        compilation.assets[self.settings.fileName] = {
                             source() {
-                                return mapContent;
+                                return content;
                             },
                             size() {
-                                return mapContent.length;
+                                return content.length;
                             }
                         };
-                    }
+    
+                        callback();
+                    });
                 }
                 else {
                     content = Object.keys(allFiles)
                         .map(fileName => allFiles[fileName])
                         .reduce((content1, content2) => (`${content1}\n${content2}`), '');
+
+
+                    compilation.assets[self.settings.fileName] = {
+                        source() {
+                            return content;
+                        },
+                        size() {
+                            return content.length;
+                        }
+                    };
+
+                    callback();
                 }
-
-                compilation.assets[self.settings.fileName] = {
-                    source() {
-                        return content;
-                    },
-                    size() {
-                        return content.length;
-                    }
-                };
-
-                callback();
             });
         });
 
