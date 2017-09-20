@@ -16,7 +16,17 @@ class ConcatPlugin {
             filesToConcat: []
         }, options);
 
-        let svgoParams = {};
+        let svgoParams = {
+            full: true,
+            multipass: false,
+            plugins: [
+                { removeDesc: {removeAny: true} },
+                { removeTitle: {} }, // pass it an argument to enable
+                'removeComments', // does enable default plugins. (using { full: true } )
+                'removeMetadata',
+            ]
+        };
+
         if (typeof this.settings.svgo === 'object') {
             svgoParams = Object.assign({}, svgoParams, this.settings.svgo);
         }
