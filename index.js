@@ -11,7 +11,7 @@ const path = require('path');
 class ConcatPlugin {
     constructor(options) {
         this.settings = Object.assign({}, {
-            minify: false, // or you can set minify options
+            minify: false, // Use svgo
             useHash: false, // md5 file
             sourceMap: false, // generate sourceMap
             name: 'svg-sprite', // used in html-webpack-plugin
