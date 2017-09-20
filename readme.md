@@ -20,7 +20,7 @@ new SvgConcatPlugin({
     * Also you can pass SVGO options object;
     * @param Boolean|Object
     */
-    minify: true, 
+    svgo: true, 
 
     /**
     * Use hash in filename

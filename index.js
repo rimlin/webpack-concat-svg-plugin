@@ -9,20 +9,20 @@ const path = require('path');
 class ConcatPlugin {
     constructor(options) {
         this.settings = Object.assign({}, {
-            minify: false, // SVGO options
+            svgo: false, // SVGO options
             useHash: false, // md5 file
             name: 'svg-sprite', // used in html-webpack-plugin
             fileName: '[name].[hash].bundle.svg', // would output to 'svg-sprite.d41d8cd98f00b204e980.bundle.svg'
             filesToConcat: []
         }, options);
 
-        let options = {};
-        if (typeof this.settings.minify === 'object') {
-            options = Object.assign({}, this.settings.minify, options);
+        let svgoParams = {};
+        if (typeof this.settings.svgo === 'object') {
+            svgoParams = Object.assign({}, svgoParams, this.settings.svgo);
         }
 
         // used to determine if we should emit files during compiler emit event
-        this.svgo = new SVGO(options);
+        this.svgo = new SVGO(svgoParams);
         this.startTime = Date.now();
         this.prevTimestamps = {};
         this.filesToConcatAbsolute = options.filesToConcat
@@ -122,7 +122,7 @@ class ConcatPlugin {
 
                 self.settings.fileName = self.getFileName(allFiles);
 
-                if (process.env.NODE_ENV === 'production' || self.settings.minify) {
+                if (process.env.NODE_ENV === 'production' || self.settings.svgo) {
                     self.svgo.optimize(filesContent).then(function(result) {
                         content = result.data;
                         
