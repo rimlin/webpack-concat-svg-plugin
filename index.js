@@ -6,13 +6,39 @@ const SVGO = require('svgo');
 const md5 = require('md5');
 const path = require('path');
 
-class ConcatPlugin {
+class ConcatSvgPlugin {
     constructor(options) {
         this.settings = Object.assign({}, {
-            svgo: false, // SVGO options
-            useHash: false, // md5 file
-            name: 'svg-sprite', // used in html-webpack-plugin
-            fileName: '[name].[hash].bundle.svg', // would output to 'svg-sprite.d41d8cd98f00b204e980.bundle.svg'
+            /**
+            * If true using SVGO with default options;
+            * If false not using SVGO;
+            * Also you can pass SVGO options object;
+            * @param Boolean|Object
+            */
+            svgo: false, 
+    
+            /**
+            * Use hash in filename
+            * @param Boolean
+            */
+            useHash: false,
+        
+            /**
+            * Name of file
+            * @param String
+            */
+            name: 'svg-sprite',
+        
+            /**
+            * File name template 
+            * @param String
+            */
+            fileName: '[name].[hash].svg',
+
+            /**
+            * List of files, which should be concatenated
+            * @param Array<String>
+            */
             filesToConcat: []
         }, options);
 
@@ -78,6 +104,7 @@ class ConcatPlugin {
     apply(compiler) {
         const self = this;
         let content = '';
+        
         const concatPromise = () => self.settings.filesToConcat.map(fileName =>
             new Promise((resolve, reject) => {
                 fs.readFile(fileName, (err, data) => {
@@ -149,23 +176,12 @@ class ConcatPlugin {
 
         compiler.plugin('compilation', compilation => {
             compilation.plugin('html-webpack-plugin-before-html-generation', (htmlPluginData, callback) => {
-                Promise.all(concatPromise()).then(files => {
-                    const allFiles = files.reduce((file1, file2) => Object.assign(file1, file2));
-
-                    htmlPluginData.assets.webpackConcat = htmlPluginData.assets.webpackConcat || {};
-
-                    const relativePath = path.relative(htmlPluginData.outputName, self.settings.fileName)
-                        .split(path.sep).slice(1).join(path.sep);
-
-                    htmlPluginData.assets.webpackConcat[self.settings.name] = self.getFileName(allFiles, relativePath);
-
-                    callback(null, htmlPluginData);
-                }, (err) => {
-                    console.log(err);
-                });
+                htmlPluginData.assets.webpackConcatSvg = htmlPluginData.assets.webpackConcatSvg || {};
+                htmlPluginData.assets.webpackConcatSvg[self.settings.name] = content;
+                callback(null, htmlPluginData);
             });
         });
     }
 }
 
-module.exports = ConcatPlugin;
+module.exports = ConcatSvgPlugin;
