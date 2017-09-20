@@ -3,13 +3,20 @@
  * @author huangxueliang
  */
 const fs = require('fs');
-const UglifyJS = require('uglify-js');
+const minify = require('html-minifier').minify;
 const md5 = require('md5');
 const path = require('path');
 
 class ConcatPlugin {
     constructor(options) {
-        this.settings = options;
+        this.settings = Object.assign({}, {
+            minify: false, // or you can set minify options
+            useHash: false, // md5 file
+            sourceMap: false, // generate sourceMap
+            name: 'svg-sprite', // used in html-webpack-plugin
+            fileName: '[name].[hash].bundle.svg', // would output to 'svg-sprite.d41d8cd98f00b204e980.bundle.svg'
+            filesToConcat: []
+        }, options);
 
         // used to determine if we should emit files during compiler emit event
         this.startTime = Date.now();
@@ -26,7 +33,7 @@ class ConcatPlugin {
             const fileMd5 = this.md5File(files);
 
             if (!hashRegExp.test(filePath)) {
-                filePath = filePath.replace(/\.js$/, '.[hash].js');
+                filePath = filePath.replace(/\.svg$/, '.[hash].svg');
             }
             filePath = filePath.replace(hashRegExp, fileMd5.slice(0, 20));
         }
@@ -59,6 +66,7 @@ class ConcatPlugin {
                 });
             })
         );
+
         const dependenciesChanged = compilation => {
             const fileTimestampsKeys = Object.keys(compilation.fileTimestamps);
             // Since there are no time stamps, assume this is the first run and emit files
@@ -78,24 +86,23 @@ class ConcatPlugin {
             if (!dependenciesChanged(compilation)) {
                 return callback();
             }
+
             Promise.all(concatPromise()).then(files => {
                 const allFiles = files.reduce((file1, file2) => Object.assign(file1, file2));
                 self.settings.fileName = self.getFileName(allFiles);
 
-                if (process.env.NODE_ENV === 'production' || self.settings.uglify) {
-                    let options = {
-                        fromString: true
-                    };
+                if (process.env.NODE_ENV === 'production' || self.settings.minify) {
+                    let options = {};
 
-                    if (typeof self.settings.uglify === 'object') {
-                        options = Object.assign({}, self.settings.uglify, options);
+                    if (typeof self.settings.minify === 'object') {
+                        options = Object.assign({}, self.settings.minify, options);
                     }
 
                     if (self.settings.sourceMap) {
                         options.outSourceMap = `${self.settings.fileName.split(path.sep).slice(-1).join(path.sep)}.map`;
                     }
 
-                    const result = UglifyJS.minify(allFiles, options);
+                    const result = minify(allFiles, options);
 
                     content = result.code;
 

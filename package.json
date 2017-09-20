@@ -23,6 +23,6 @@
   "homepage": "https://github.com/rimlin/webpack-concat-svg-plugin#readme",
   "dependencies": {
     "md5": "^2.2.1",
-    "uglify-js": "^2.8.29"
+    "html-minifier": "^3.5.5"
   }
 }
