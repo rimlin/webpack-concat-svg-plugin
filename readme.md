@@ -60,7 +60,7 @@ Example of usage:
 ```
     ...
 
-    <div style="height: 0;">
+    <div style="display: none; height: 0;">
       <%= htmlWebpackPlugin.files.webpackConcatSvg.icons %>
     </div>
   </body>
