@@ -14,11 +14,36 @@ npm install webpack-concat-svg-plugin --save-dev
 const SvgConcatPlugin = require('webpack-concat-svg-plugin');
 
 new SvgConcatPlugin({
-    minify: true,
+    /**
+    * If true using SVGO with default options;
+    * If false not using SVGO;
+    * Also you can pass SVGO options object;
+    * @param Boolean|Object
+    */
+    minify: true, 
+
+    /**
+    * Use hash in filename
+    * @param Boolean
+    */
     useHash: false,
-    sourceMap: false,
+
+    /**
+    * Name of file
+    * @param String
+    */
     name: 'icons',
-    fileName: '[name].svg',
+
+    /**
+    * File name template 
+    * @param String
+    */
+    fileName: '[name].[hash].svg',
+
+    /**
+    * List of files, which should be concatenated
+    * @param Array<String>
+    */
     filesToConcat:  ['./src/icons/play.svg', './src/icons/pause.svg']
 });
 ```
