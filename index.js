@@ -1,9 +1,7 @@
 /**
- * @file webpack-concat-plugin
- * @author huangxueliang
+ * webpack-concat-svg-plugin based on webpack-concat-plugin (@author huangxueliang)
  */
 const fs = require('fs');
-const minify = require('html-minifier').minify;
 const SVGO = require('svgo');
 const md5 = require('md5');
 const path = require('path');
@@ -11,16 +9,20 @@ const path = require('path');
 class ConcatPlugin {
     constructor(options) {
         this.settings = Object.assign({}, {
-            minify: false, // Use svgo
+            minify: false, // SVGO options
             useHash: false, // md5 file
-            sourceMap: false, // generate sourceMap
             name: 'svg-sprite', // used in html-webpack-plugin
             fileName: '[name].[hash].bundle.svg', // would output to 'svg-sprite.d41d8cd98f00b204e980.bundle.svg'
             filesToConcat: []
         }, options);
 
+        let options = {};
+        if (typeof this.settings.minify === 'object') {
+            options = Object.assign({}, this.settings.minify, options);
+        }
+
         // used to determine if we should emit files during compiler emit event
-        this.svgo = new SVGO({});
+        this.svgo = new SVGO(options);
         this.startTime = Date.now();
         this.prevTimestamps = {};
         this.filesToConcatAbsolute = options.filesToConcat
@@ -54,13 +56,13 @@ class ConcatPlugin {
     }
 
     svgFormat(filesContent) {
-        return (`
-            <?xml version="1.0" encoding="utf-8"?> 
+        return (
+            `<?xml version="1.0" encoding="utf-8"?> 
             <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"> 
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"> 
                 ${filesContent} 
-            </svg>
-        `);
+            </svg>`
+        );
     }
 
     apply(compiler) {
@@ -76,6 +78,8 @@ class ConcatPlugin {
                         [fileName]: data.toString()
                     });
                 });
+            }, (err) => {
+                console.log(err);
             })
         );
 
@@ -92,6 +96,19 @@ class ConcatPlugin {
             return changed;
         };
 
+        const processContent = (compilation, content, callback) => {
+            compilation.assets[self.settings.fileName] = {
+                source() {
+                    return content;
+                },
+                size() {
+                    return content.length;
+                }
+            };
+    
+            callback();
+        }
+
         compiler.plugin('emit', (compilation, callback) => {
 
             compilation.fileDependencies.push(...self.filesToConcatAbsolute);
@@ -106,60 +123,17 @@ class ConcatPlugin {
                 self.settings.fileName = self.getFileName(allFiles);
 
                 if (process.env.NODE_ENV === 'production' || self.settings.minify) {
-                    let options = {};
-
-                    if (typeof self.settings.minify === 'object') {
-                        options = Object.assign({}, self.settings.minify, options);
-                    }
-
-                    if (self.settings.sourceMap) {
-                        options.outSourceMap = `${self.settings.fileName.split(path.sep).slice(-1).join(path.sep)}.map`;
-                    }
-
                     self.svgo.optimize(filesContent).then(function(result) {
                         content = result.data;
                         
-                        if (self.settings.sourceMap) {
-                            const mapContent = content.toString();
-                            compilation.assets[`${self.settings.fileName}.map`] = {
-                                source() {
-                                    return mapContent;
-                                },
-                                size() {
-                                    return mapContent.length;
-                                }
-                            };
-                        }
-                
-                        compilation.assets[self.settings.fileName] = {
-                            source() {
-                                return content;
-                            },
-                            size() {
-                                return content.length;
-                            }
-                        };
-    
-                        callback();
+                        processContent(compilation, content, callback);
                     });
                 }
                 else {
-                    content = Object.keys(allFiles)
-                        .map(fileName => allFiles[fileName])
-                        .reduce((content1, content2) => (`${content1}\n${content2}`), '');
-
-
-                    compilation.assets[self.settings.fileName] = {
-                        source() {
-                            return content;
-                        },
-                        size() {
-                            return content.length;
-                        }
-                    };
-
-                    callback();
+                    processContent(compilation, filesContent, callback);
                 }
+            }, (err) => {
+                console.log(err);
             });
         });
 
@@ -176,6 +150,8 @@ class ConcatPlugin {
                     htmlPluginData.assets.webpackConcat[self.settings.name] = self.getFileName(allFiles, relativePath);
 
                     callback(null, htmlPluginData);
+                }, (err) => {
+                    console.log(err);
                 });
             });
         });
