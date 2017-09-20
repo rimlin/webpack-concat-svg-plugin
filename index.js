@@ -133,7 +133,7 @@ class ConcatPlugin {
                 self.settings.fileName = self.getFileName(allFiles);
 
                 if (process.env.NODE_ENV === 'production' || self.settings.svgo) {
-                    self.svgo.optimize(filesContent).then(function(result) {
+                    self.svgo.optimize(filesContent, function(result) {
                         content = result.data;
                         
                         processContent(compilation, content, callback);
