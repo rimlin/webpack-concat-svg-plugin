@@ -4,6 +4,8 @@
 
 This plugin based on [webpack-concat-plugin](https://github.com/hxlniada/webpack-concat-plugin) and created to concat svg to one file
 
+Plugin use [SVGO](https://github.com/svg/svgo) to minify svg content;
+
 ### Install
 ```
 npm install webpack-concat-svg-plugin --save-dev
