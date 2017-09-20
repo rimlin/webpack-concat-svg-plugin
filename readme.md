@@ -49,3 +49,20 @@ new SvgConcatPlugin({
     filesToConcat:  ['./src/icons/play.svg', './src/icons/pause.svg']
 });
 ```
+
+### Inject inline SVG content to html
+To inject inline svg content in output html page you need to use [html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin).
+Your svg content is stored in `htmlWebpackPlugin.files.webpackConcatSvg[name]` variable, where `[name]` is your name of file.
+
+Example of usage:
+
+*index.ejs*
+```
+    ...
+
+    <div style="height: 0;">
+      <%= htmlWebpackPlugin.files.webpackConcatSvg.icons %>
+    </div>
+  </body>
+</html>
+```
